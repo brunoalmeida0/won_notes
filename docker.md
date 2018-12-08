@@ -78,6 +78,8 @@ Nesse segundo exemplo, o container será criado, startado, executado e no final 
 Nomeia um container. Não pode existir dois containers com o mesmo nome.
 
 
+
+
 # Modo interativo
 É um modo de executar um container de forma interativa, diferente do modo tradicional do *Daemon* onde o container roda em background executando o seu conteúdo com um banco de dados ou outro serviço.
 
@@ -90,49 +92,129 @@ O modo interativo é interessante para realizar testes e visualizar o que está 
 Após a execução do ```run```, será executado o comando ```bash --version``` e o container será parado, pois a função a ser desempenhada foi passada.
 
 
+# Mapeamento de portas dos containers
+
+A comunicação entre containers e entre o SO Host é fundamental para a utilização e desenvolvimento de aplicações e serviços.
+
+Um exemplo de exposição de uma porta do container para o Host é:
+
+```docker run -p 8080:80 nginx```
+
+Onde a flag ```-p``` expõe para a maquina host a porta 8080 que é mapeada para a porta 80 que está startada no container, que é a porta padrão startada pelo ngnix que também é a padrão do HTTP.
+
+Para acessar o conteúdo deste container é necessário acessar o ```http://localhost:8080```
+
+# Mapeamento de diretórios para o container
+
+Para um container docker acessar um diretório do host é necessário que o caminho da pasta local seja definido, assim como o diretório do container que irá espelhar.
+
+```docker run -p 8080:80 -v $(pwd)/html:/usr/share/nginx/html nginx```
+
+Onde ```-v``` é a flag que expecifica o volume a ser mapeado.
 
 
+# Rodando um servidor em background
+
+Essa é uma das principais funcionalidades do Docker.  Com isso temos a possibildade de startar aplicações e servidores em background e conseguir fazer eles se comunicarem entre si.
+
+> __Ex:__
+> ```docker run -d --name ex-daemon-basic -p 8080:80 -v $(pwd)/html:/usr/share/nginx/html nginx```
+
+Neste comando estamos nomeando um container do *nginx*, mapeando uma porta no host para uma no container e um diretório no host e um no container e com a flag ```-d``` é possível rodar o comando em modo *Daemon*, ou seja, em background.
+
+> __Gerenciamento de containers em background__
+
+>__Start:__ ```docker start <nome ou id do container>```
+
+>__Stop:__ ```docker stop <nome ou id do container>```
+
+>__Restart:__ ```docker restart <nome ou id do container>```
+
+>__Ver logs:__ ```docker logs <nome ou id do container>```
+
+>__Ver informações do container:__ ```docker inspect <nome ou id do container>```
+
+>__Ver informações do sistema do container:__ ```docker container exec <nome ou id do container> uname -or```
 
 
+# Gerenciamento de imagens
 
+```docker pull <nome da imagem>```
 
+Baixa a imagem do repositório remoto
 
+```docker image ls```
 
+Listar imagens baixadas
 
+```docker image rm <nome da imagem>```
 
+Remove a imagem
 
+```docker image inspect <nome da imagem>```
 
+Lista informações sobre a imagem
 
+```docker image tag <nome>:<tag atual ou versão> <nova tag>```
 
+Adiciona uma tag a imagem
 
+```docker image build```
 
+Criar um arquivo descritor e gerar uma imagem
 
+```docker image push```
 
- 
+Faz um push do build para algum repositório
 
-## Gerando container a partir de uma imagem
+# Docker Hub X Docker Registry
 
-As imagens podem ser entendidas como geradores de containers, é a partir dela que o container será criado.
+Docker Registry é uma API que permite que imagens sejam enviadas e recebidas. Usuários podem ter sua própria Docker Registry podendo salvar suas próprias imagens. O Docker Hub utiliza o Docker Registry para fazer o fluxo de armazenamento e disponibilização das suas imagens.
 
-Um exemplo que ilustra bem isso é a imagem "hello-world" presente no repositório de imagens Docker Hub (onde estão presentes as imagens oficiais).
+# Escrevendo imagens
 
+Para fazer um *build* de uma imagem é necessário criar um arquivo descritor do docker, o __Docker File__.
 
-``` docker run hello-world ```
+> Exemplo de Docker File
+>
+>```FROM nginx:latest ```
+>
+>```RUN echo '<h1>Hello Wolrd!!</h1>' > /usr/share/nginx/html/index.html```
 
-Ao executar esse comando o docker busca a imagem localmente, se ela não for encontrada, o docker buscará no Docker Hub.
+Esse Dockerfile cria um container a partir da imagem do *nginx* e adiciona mais uma layer ao container, que nesse caso é a criação do arquivo *index.html* e a adição de conteúdo dentro dele.
 
-Para visualizarmos os containers que estão em execução é necessário executar o comando
-``` docker ps ```, porém, neste caso o hello-world não estará mais lá, já que a sua função é somente printar no terminal uma mensagem e finalizar sua execução.
+Para fazer o build dessa imagem é necessário usar o seguinte comando:
 
-Para que todos os containers já executados no host sejam visualizados, a tag  ```-a``` deve ser acrescentada:
-``` docker ps -a ```
+```docker image build -t ex-simple-build .```
 
+Onde *build* é o comando principal, *-t* define o nome da tag, e o *"."* é o caminho para o arquivo Dockerfile.
 
-O comando
-``` docker images ``` 
- mostra todas as imagens presentes na máquina. "Uma imagem é um container parado". Quando a imagem é executada ela é transformada em um container em execução.
+Com isso é possível verificar com o ```docker image ls``` que a imagem criada está sendo listada.
 
+Para executar um container a partir da imagem criada é necessário simplesmente um *run*
 
+```docker run -p 80:80 ex-simple-build```
 
+## Recebendo argumentos no Dockerfile
 
- 
+Podemos receber argumentos no Dockerfile e assim adequar o container criado ao problema ser resolvido.
+
+> Exemplo de Dockerfile recebendo argumentos:
+>
+>```FROM debian```
+>```LABEL maintainer 'Bruno <brunoalmeida>'```
+>
+>```ARG S3_BUCKET=files```
+>```ENV S3_BUCKET=${S3_BUCKET}```
+
+O argumento neste caso é chamado de *S3_BUCKET*.
+
+Para passar parâmetros para esse argumento, no momento do build é necessário expecíficar:
+
+```docker image build --build-arg S3_BUCKET=myapp -t ex-arg .```
+
+O parâmetro recebido foi a string *myapp*
+
+Para exibir a variável deste exemplo:
+
+```docker run ex-arg bash -c 'echo $S3_BUCKET'```
